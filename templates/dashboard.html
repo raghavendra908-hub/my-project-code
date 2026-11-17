@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block header_actions %}
+<span class="pill">{{ username }}</span>
+<form method="post" action="{{ url_for('main.logout') }}" class="inline-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="btn ghost">Log out</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<section class="page-intro">
+  <h1>Monitoring dashboard</h1>
+  <p class="lede">
+    Live host metrics for the machine running this app. Panels below are placeholders until metrics are wired.
+  </p>
+</section>
+
+<section class="inventory-strip" aria-label="Server inventory">
+  <div class="strip-label">Servers</div>
+  <p class="strip-empty">No servers yet — inventory arrives in a later phase. Metrics will always reflect localhost.</p>
+</section>
+
+<section class="metrics-grid" aria-label="Host metrics">
+  {% for panel in panels %}
+  <article class="metric-panel" id="panel-{{ panel.id }}">
+    <header class="panel-head">
+      <h2>{{ panel.title }}</h2>
+      <span class="panel-hint">{{ panel.hint }}</span>
+    </header>
+    <div class="panel-body placeholder">
+      <span class="placeholder-label">No data yet</span>
+    </div>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

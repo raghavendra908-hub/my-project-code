@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in{% endblock %}
+
+{% block content %}
+<section class="auth-panel">
+  <h1>Sign in</h1>
+  <p class="lede">Demo account only. Unauthenticated users cannot view metrics.</p>
+
+  <form method="post" action="{{ url_for('main.login') }}" class="auth-form" novalidate>
+    {{ form.hidden_tag() }}
+    <label class="field">
+      <span>Username</span>
+      {{ form.username(autocomplete="username", class_="input") }}
+      {% for error in form.username.errors %}
+      <span class="field-error">{{ error }}</span>
+      {% endfor %}
+    </label>
+    <label class="field">
+      <span>Password</span>
+      {{ form.password(autocomplete="current-password", class_="input") }}
+      {% for error in form.password.errors %}
+      <span class="field-error">{{ error }}</span>
+      {% endfor %}
+    </label>
+    <button type="submit" class="btn primary">Sign in</button>
+  </form>
+
+  <p class="auth-hint">
+    Demo login: username <code>admin</code>, password <code>admin123</code>
+    (local demo only — not for production).
+  </p>
+</section>
+{% endblock %}
