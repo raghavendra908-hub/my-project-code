@@ -1,20 +1,20 @@
-# UI notes (Phase 0)
+# UI notes
 
 ## Theme
 
-Custom CSS in `static/css/style.css` — dark / high-contrast ops look (teal accent on deep navy). No Bootstrap or Tailwind; one consistent stack.
+Custom CSS in `static/css/style.css` — dark / high-contrast ops look (teal accent on deep navy).
 
-## Layout regions
+## Layout map
 
 | Region | Role |
 |--------|------|
-| **Header** | App brand (`Host Monitor`), subtitle, signed-in user + logout |
-| **Intro** | Page title + short description |
-| **Inventory strip** | Placeholder for server list (later phase) |
-| **Metrics grid** | Seven panels: CPU, Memory, Disk, Load, Network, Ports, Processes |
+| **Header** | Brand, signed-in user, refresh interval pill, logout |
+| **Intro** | Title + localhost telemetry banner |
+| **Inventory strip** | List / add / remove servers (in-memory) |
+| **Metrics grid** | CPU, Memory, Disk, Load, Network, Ports, Processes |
+| **Sign in** | `/login` — username/password + CSRF |
 | **Footer** | Localhost-only reminder |
-| **Sign in** | `/login` — username/password form with CSRF |
 
-## Panels
+## Refresh
 
-Each metric panel has a title, short hint, and a **No data yet** body until `psutil` is wired (Phase 3).
+Meta refresh every 8 seconds on the dashboard only (`REFRESH_SECONDS`).

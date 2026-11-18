@@ -110,13 +110,15 @@ No cloud deploy, no Docker requirement, no remote agents for this demo.
 
 ## 7. Acceptance criteria
 
-- [ ] Unauthenticated users cannot see metrics.
-- [ ] Login works with `admin` / `admin123`; password is stored hashed.
-- [ ] User can add/list/remove server entries in memory.
-- [ ] Dashboard shows CPU, memory, disk, load average, network RX/TX, listening ports, and a bounded process list from the **local** machine.
-- [ ] Dashboard auto-refreshes.
-- [ ] UI is read-only and visually polished for a demo.
-- [ ] App runs locally with a short install/start path.
+Verified in [acceptance.md](./acceptance.md) (2026-11-17):
+
+- [x] Unauthenticated users cannot see metrics.
+- [x] Login works with `admin` / `admin123`; password is stored hashed.
+- [x] User can add/list/remove server entries in memory.
+- [x] Dashboard shows CPU, memory, disk, load average, network RX/TX, listening ports, and a bounded process list from the **local** machine.
+- [x] Dashboard auto-refreshes.
+- [x] UI is read-only and visually polished for a demo.
+- [x] App runs locally with a short install/start path.
 
 ---
 

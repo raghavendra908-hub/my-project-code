@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Servers{% endblock %}
+
+{% block header_actions %}
+<a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+<a class="nav-link" href="{{ url_for('main.servers_page') }}">Servers</a>
+<span class="pill">{{ username }}</span>
+<form method="post" action="{{ url_for('main.logout') }}" class="inline-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="btn ghost">Log out</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<section class="page-intro">
+  <h1>Server inventory</h1>
+  <p class="lede">
+    In-memory list for the demo. Restart clears it. Live metrics always come from localhost.
+  </p>
+</section>
+
+<section class="inventory-strip" aria-label="Server inventory">
+  <div class="strip-label">Servers</div>
+  {% if servers %}
+  <ul class="server-list">
+    {% for server in servers %}
+    <li class="server-item">
+      <div class="server-meta">
+        <strong>{{ server.name }}</strong>
+        <code>{{ server.host }}</code>
+        {% if server.notes %}<span class="server-notes">{{ server.notes }}</span>{% endif %}
+      </div>
+      <form method="post" action="{{ url_for('main.servers_remove') }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="server_id" value="{{ server.id }}">
+        <button type="submit" class="btn ghost danger">Remove</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="strip-empty">No servers yet — add <code>localhost</code> below.</p>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('main.servers_add') }}" class="server-form" novalidate>
+    {{ server_form.hidden_tag() }}
+    <label class="field">
+      <span>Name / label</span>
+      {{ server_form.name(class_="input", placeholder="demo-local") }}
+    </label>
+    <label class="field">
+      <span>Hostname or IP</span>
+      {{ server_form.host(class_="input", placeholder="localhost") }}
+    </label>
+    <label class="field">
+      <span>Notes / tags</span>
+      {{ server_form.notes(class_="input", rows="1", placeholder="optional") }}
+    </label>
+    <button type="submit" class="btn primary">Add server</button>
+  </form>
+</section>
+{% endblock %}

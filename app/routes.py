@@ -11,30 +11,36 @@ from app.auth import (
     logout_user,
     verify_credentials,
 )
-from app.forms import LoginForm
+from app.forms import LoginForm, RemoveServerForm, ServerForm
+from app.inventory import add_server, list_servers, remove_server
+from app.metrics import REFRESH_SECONDS, collect_all
 
 bp = Blueprint("main", __name__)
-
-# Placeholder panels — metrics wired in a later phase.
-DASHBOARD_PANELS = (
-    {"id": "cpu", "title": "CPU", "hint": "Overall usage %"},
-    {"id": "memory", "title": "Memory", "hint": "Used / free"},
-    {"id": "disk", "title": "Disk", "hint": "Root filesystem"},
-    {"id": "load", "title": "Load average", "hint": "1 / 5 / 15 min"},
-    {"id": "network", "title": "Network", "hint": "RX / TX"},
-    {"id": "ports", "title": "Listening ports", "hint": "TCP / UDP"},
-    {"id": "processes", "title": "Processes", "hint": "Top by CPU / memory"},
-)
 
 
 @bp.get("/")
 @login_required
 def dashboard():
     """Monitoring dashboard — requires an authenticated session."""
+    metrics = collect_all()
     return render_template(
         "dashboard.html",
-        panels=DASHBOARD_PANELS,
         username=current_user(),
+        servers=list_servers(),
+        metrics=metrics,
+        refresh_seconds=REFRESH_SECONDS,
+    )
+
+
+@bp.get("/servers")
+@login_required
+def servers_page():
+    """Inventory management page (add / remove servers)."""
+    return render_template(
+        "servers.html",
+        username=current_user(),
+        servers=list_servers(),
+        server_form=ServerForm(),
     )
 
 
@@ -64,3 +70,44 @@ def logout():
     logout_user()
     flash("Signed out.", "ok")
     return redirect(url_for("main.login"))
+
+
+@bp.post("/servers")
+@login_required
+def servers_add():
+    """Add a server inventory entry (in-memory; metrics stay localhost)."""
+    form = ServerForm()
+    if form.validate_on_submit():
+        try:
+            add_server(
+                name=form.name.data or "",
+                host=form.host.data or "",
+                notes=form.notes.data or "",
+            )
+            flash("Server added to inventory.", "ok")
+        except ValueError as exc:
+            flash(str(exc), "error")
+    else:
+        flash("Could not add server — check required fields.", "error")
+    return redirect(url_for("main.servers_page"))
+
+
+@bp.post("/servers/remove")
+@login_required
+def servers_remove():
+    """Remove a server inventory entry by id."""
+    form = RemoveServerForm()
+    if form.validate_on_submit():
+        raw = form.server_id.data or ""
+        try:
+            server_id = int(raw)
+        except (TypeError, ValueError):
+            flash("Invalid server id.", "error")
+            return redirect(url_for("main.servers_page"))
+        if remove_server(server_id):
+            flash("Server removed from inventory.", "ok")
+        else:
+            flash("Server not found.", "error")
+    else:
+        flash("Could not remove server.", "error")
+    return redirect(url_for("main.servers_page"))
