@@ -2,7 +2,49 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block head_extra %}
+<script>
+  (function () {
+    var seconds = {{ refresh_seconds|int }};
+    var key = "hostMonitorAutoRefresh";
+    function enabled() {
+      var box = document.getElementById("auto-refresh");
+      if (!box) return true;
+      return box.checked;
+    }
+    function schedule() {
+      setTimeout(function () {
+        if (!enabled()) {
+          schedule();
+          return;
+        }
+        var el = document.activeElement;
+        var tag = el && el.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON") {
+          schedule();
+          return;
+        }
+        window.location.reload();
+      }, seconds * 1000);
+    }
+    document.addEventListener("DOMContentLoaded", function () {
+      var box = document.getElementById("auto-refresh");
+      if (box) {
+        var saved = localStorage.getItem(key);
+        if (saved !== null) box.checked = saved === "1";
+        box.addEventListener("change", function () {
+          localStorage.setItem(key, box.checked ? "1" : "0");
+        });
+      }
+      schedule();
+    });
+  })();
+</script>
+{% endblock %}
+
 {% block header_actions %}
+<a class="nav-link" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+<a class="nav-link" href="{{ url_for('main.servers_page') }}">Servers</a>
 <span class="pill">{{ username }}</span>
 <form method="post" action="{{ url_for('main.logout') }}" class="inline-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -14,26 +56,161 @@
 <section class="page-intro">
   <h1>Monitoring dashboard</h1>
   <p class="lede">
-    Live host metrics for the machine running this app. Panels below are placeholders until metrics are wired.
+    Live host metrics for localhost and inventory servers.
+    Data refreshes every {{ refresh_seconds }}s (toggle below).
   </p>
+  <div class="refresh-bar">
+    <label class="check-label">
+      <input type="checkbox" id="auto-refresh" checked>
+      Auto-refresh
+    </label>
+    <a class="btn ghost" href="{{ url_for('main.dashboard') }}">Refresh now</a>
+  </div>
 </section>
 
 <section class="inventory-strip" aria-label="Server inventory">
-  <div class="strip-label">Servers</div>
-  <p class="strip-empty">No servers yet — inventory arrives in a later phase. Metrics will always reflect localhost.</p>
+  <div class="strip-head">
+    <div class="strip-label">Servers</div>
+    <a class="nav-link" href="{{ url_for('main.servers_page') }}">Manage inventory</a>
+  </div>
+  {% if servers %}
+  <ul class="server-list">
+    {% for server in servers %}
+    <li class="server-item compact">
+      <div class="server-meta">
+        <strong>{{ server.name }}</strong>
+        <code>{{ server.host }}</code>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="strip-empty">No servers yet — add inventory under Servers. Metrics always include localhost.</p>
+  {% endif %}
 </section>
 
-<section class="metrics-grid" aria-label="Host metrics">
-  {% for panel in panels %}
-  <article class="metric-panel" id="panel-{{ panel.id }}">
+<article class="host-summary" aria-label="Localhost summary">
+  <h2>localhost</h2>
+  <p class="summary-line">
+    CPU <strong>{% if metrics.cpu.percent is not none %}{{ metrics.cpu.percent }}%{% else %}—{% endif %}</strong>
+    · Mem <strong>{% if metrics.memory.percent is defined %}{{ metrics.memory.percent }}%{% else %}—{% endif %}</strong>
+  </p>
+</article>
+
+<section class="metrics-grid compact" aria-label="Host metrics">
+  <article class="metric-panel" id="panel-cpu">
     <header class="panel-head">
-      <h2>{{ panel.title }}</h2>
-      <span class="panel-hint">{{ panel.hint }}</span>
+      <h2>CPU</h2>
+      <span class="panel-hint">Overall usage %</span>
     </header>
-    <div class="panel-body placeholder">
-      <span class="placeholder-label">No data yet</span>
+    <div class="panel-body">
+      {% if metrics.cpu.error %}
+      <p class="metric-error">{{ metrics.cpu.error }}</p>
+      {% else %}
+      <p class="metric-value">{{ metrics.cpu.percent|round(0)|int }}<span class="unit">%</span></p>
+      {% endif %}
     </div>
   </article>
-  {% endfor %}
+
+  <article class="metric-panel" id="panel-memory">
+    <header class="panel-head">
+      <h2>Memory</h2>
+      <span class="panel-hint">Used / free</span>
+    </header>
+    <div class="panel-body">
+      {% if metrics.memory.error %}
+      <p class="metric-error">{{ metrics.memory.error }}</p>
+      {% else %}
+      <p class="metric-value text">{{ metrics.memory.used_h }} / {{ metrics.memory.free_h }} <span class="unit">({{ metrics.memory.percent }}%)</span></p>
+      {% endif %}
+    </div>
+  </article>
+
+  <article class="metric-panel" id="panel-disk">
+    <header class="panel-head">
+      <h2>Disk</h2>
+      <span class="panel-hint">Root filesystem</span>
+    </header>
+    <div class="panel-body">
+      {% if metrics.disk.error %}
+      <p class="metric-error">{{ metrics.disk.error }}</p>
+      {% else %}
+      <p class="metric-value text">{{ metrics.disk.used_h }} / {{ metrics.disk.free_h }} <span class="unit">({{ metrics.disk.percent|round(0)|int }}%)</span></p>
+      {% endif %}
+    </div>
+  </article>
+
+  <article class="metric-panel" id="panel-load">
+    <header class="panel-head">
+      <h2>Load average</h2>
+      <span class="panel-hint">1 / 5 / 15 min</span>
+    </header>
+    <div class="panel-body">
+      {% if metrics.load.error %}
+      <p class="metric-error">{{ metrics.load.error }}</p>
+      {% else %}
+      <p class="metric-value text mono">{{ metrics.load.one }} / {{ metrics.load.five }} / {{ metrics.load.fifteen }}</p>
+      {% endif %}
+    </div>
+  </article>
+
+  <article class="metric-panel" id="panel-network">
+    <header class="panel-head">
+      <h2>Network</h2>
+      <span class="panel-hint">RX / TX</span>
+    </header>
+    <div class="panel-body">
+      {% if metrics.network.error %}
+      <p class="metric-error">{{ metrics.network.error }}</p>
+      {% else %}
+      <p class="metric-value text">RX {{ metrics.network.rx_total_h }} · TX {{ metrics.network.tx_total_h }}</p>
+      {% endif %}
+    </div>
+  </article>
+
+  <article class="metric-panel" id="panel-ports">
+    <header class="panel-head">
+      <h2>Listening ports</h2>
+      <span class="panel-hint">TCP / UDP</span>
+    </header>
+    <div class="panel-body">
+      {% if metrics.ports.error and not metrics.ports.tcp and not metrics.ports.udp %}
+      <p class="metric-error">{{ metrics.ports.error }}</p>
+      {% else %}
+      <p class="metric-value text">TCP {{ metrics.ports.tcp }} · UDP {{ metrics.ports.udp }}</p>
+      {% endif %}
+    </div>
+  </article>
+</section>
+
+<section class="detail-section" aria-label="Process list">
+  <article class="metric-panel wide" id="panel-processes">
+    <header class="panel-head">
+      <h2>Processes</h2>
+      <span class="panel-hint">top {{ metrics.processes.limit }} by CPU (read-only)</span>
+    </header>
+    <div class="panel-body">
+      {% if metrics.processes.error %}
+      <p class="metric-error">{{ metrics.processes.error }}</p>
+      {% endif %}
+      {% if metrics.processes.processes %}
+      <table class="data-table">
+        <thead><tr><th>PID</th><th>Name</th><th>CPU%</th><th>Mem%</th></tr></thead>
+        <tbody>
+          {% for row in metrics.processes.processes %}
+          <tr>
+            <td>{{ row.pid }}</td>
+            <td>{{ row.name }}</td>
+            <td>{{ row.cpu }}</td>
+            <td>{{ row.mem }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="metric-sub">No processes listed.</p>
+      {% endif %}
+    </div>
+  </article>
 </section>
 {% endblock %}
